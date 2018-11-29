@@ -17,6 +17,7 @@
 package com.baidu.openrasp.hook.server.jboss;
 
 import com.baidu.openrasp.HookHandler;
+import com.baidu.openrasp.cloud.utils.CloudUtils;
 import com.baidu.openrasp.hook.AbstractClassHook;
 import com.baidu.openrasp.hook.server.ServerStartupHook;
 import com.baidu.openrasp.plugin.checker.CheckParameter;
@@ -60,10 +61,12 @@ public class JBossStartupHook extends ServerStartupHook {
         try {
             String serverVersion = Reflection.invokeStringMethod(object, "getVersionNumber", new Class[]{});
             ApplicationModel.init("jboss", serverVersion);
-            sendRegister();
         } catch (Exception e) {
             HookHandler.LOGGER.error("handle jboss startup failed", e);
         }
-        HookHandler.doPolicyCheckWithoutRequest(CheckParameter.Type.POLICY_JBOSS_START, CheckParameter.EMPTY_MAP);
+        sendRegister();
+        if (!CloudUtils.checkCloudControlEnter()){
+            HookHandler.doPolicyCheckWithoutRequest(CheckParameter.Type.POLICY_JBOSS_START, CheckParameter.EMPTY_MAP);
+        }
     }
 }

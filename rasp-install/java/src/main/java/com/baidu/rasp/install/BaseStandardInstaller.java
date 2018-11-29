@@ -19,9 +19,12 @@ package com.baidu.rasp.install;
 import com.baidu.rasp.RaspError;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
-import java.util.Properties;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.baidu.rasp.RaspError.E10003;
 
@@ -88,9 +91,9 @@ public abstract class BaseStandardInstaller implements Installer {
     private boolean generateConfig(String dir) {
         try {
             String sep = File.separator;
-            File target = new File(dir + sep + "conf" + sep + "rasp.properties");
+            File target = new File(dir + sep + "conf" + sep + "rasp.yaml");
 
-            System.out.println("Generating \"rasp.properties\"\n- " + target.getAbsolutePath());
+            System.out.println("Generating \"rasp.yaml\"\n- " + target.getAbsolutePath());
             if (target.exists()) {
                 System.out.println("- Already exists, continuing ..");
                 return true;
@@ -99,7 +102,7 @@ public abstract class BaseStandardInstaller implements Installer {
             target.getParentFile().mkdir();
             target.createNewFile();
             FileWriter writer = new FileWriter(target);
-            InputStream is = this.getClass().getResourceAsStream("/rasp.properties");
+            InputStream is = this.getClass().getResourceAsStream("/rasp.yaml");
             IOUtils.copy(is, writer, "UTF-8");
             is.close();
             writer.close();
@@ -158,18 +161,27 @@ public abstract class BaseStandardInstaller implements Installer {
     private void setCloudArgs(String url, String appId, String appSecret) {
         try {
             if (url != null && appId != null && appSecret != null) {
-                String path = getInstallPath(serverRoot) + "conf" + File.separator + "rasp.properties";
-                FileOutputStream out = new FileOutputStream(path, true);
-                Properties properties = new Properties();
-                properties.setProperty("cloud.address", url);
-                properties.setProperty("cloud.appid", appId);
-                properties.setProperty("cloud.appsecret", appSecret);
-                properties.setProperty("cloud.enable", "true");
-                properties.store(out, "云控配置");
-                out.close();
+                String path = getInstallPath(serverRoot) + "conf" + File.separator + "rasp.yaml";
+                File yamlFile = new File(path);
+                if (yamlFile.exists()){
+                    Map<String,Object> map = new HashMap<String, Object>();
+                    map.put("cloud.enable", true);
+                    map.put("cloud.address", url);
+                    map.put("cloud.appid", appId);
+                    map.put("cloud.appsecret", appSecret);
+                    FileWriter writer = new FileWriter(yamlFile,true);
+                    writer.write(LINE_SEP);
+                    writer.write("#云控配置");
+                    writer.write(LINE_SEP);
+                    DumperOptions options = new DumperOptions();
+                    options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+                    options.setPrettyFlow(true);
+                    Yaml yaml = new Yaml(options);
+                    yaml.dump(map,writer);
+                }
             }
         } catch (Exception e) {
-            System.out.println("Unable to update rasp.properties: failed to add cloud control settings: " + e.getMessage());
+            System.out.println("Unable to update rasp.yaml: failed to add cloud control settings: " + e.getMessage());
         }
     }
 
